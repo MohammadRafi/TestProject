@@ -1,0 +1,70 @@
+import React from 'react';
+
+// Sample data from .NET Core DTO
+const internalInstructions = [
+  {
+    authTab: 'Adams',
+    sectionType: 'Authority',
+    resource: 'County note',
+    remark: 'County note'
+  },
+  {
+    authTab: 'Berwick Twp',
+    sectionType: 'Authority',
+    resource: 'Muni is never open',
+    remark: ''
+  },
+  {
+    authTab: 'Conewago Valley SD',
+    sectionType: 'Authority',
+    resource: 'School note',
+    remark: 'School note'
+  },
+  {
+    authTab: 'Berwick Twp',
+    sectionType: 'Tax Collection',
+    resource: 'Shelby Jenkins',
+    remark: 'Note about the tax collector'
+  },
+  {
+    authTab: 'Adams',
+    sectionType: 'Delinquency',
+    resource: 'Adams County Tax Claim',
+    remark: 'Don’t let tax requests'
+  },
+  {
+    authTab: 'Utility',
+    sectionType: 'Current, Sewer, Electric',
+    resource: 'Abbottstown Boro, Oro',
+    remark: 'Utility note'
+  }
+];
+
+const InstructionTable = () => {
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Auth Tab</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Section Type</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Resource</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          {internalInstructions.map((instruction, index) => (
+            <tr key={index}>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{instruction.authTab}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{instruction.sectionType}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{instruction.resource}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{instruction.remark}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+export default InstructionTable;
