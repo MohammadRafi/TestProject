@@ -1,0 +1,65 @@
+List<GetInternalInstructions> internalInstructions = new();
+
+var currentInstructions = GetInternalInstructionsList(response.TaxCollections);
+var oldInstructions = GetInternalInstructionsList(response.OldTaxCollections);
+
+// Sort each separately by Authority.Type priority
+currentInstructions = currentInstructions
+    .OrderBy(i => GetAuthorityTypePriority(i.Auth))
+    .ToList();
+
+oldInstructions = oldInstructions
+    .OrderBy(i => GetAuthorityTypePriority(i.Auth))
+    .ToList();
+
+// Combine the sorted instructions into the final list
+internalInstructions.AddRange(currentInstructions);
+internalInstructions.AddRange(oldInstructions);
+
+
+
+
+private static List<GetInternalInstructions> GetInternalInstructionsList(IEnumerable<TaxCollectionsDto>? taxCollections)
+{
+    var list = new List<GetInternalInstructions>();
+
+    foreach (var dto in taxCollections ?? Enumerable.Empty<TaxCollectionsDto>())
+    {
+        var remark = dto.Remarks?.FirstOrDefault(x => x?.RemarkType?.Name == "Internal Instructions");
+        if (remark != null && dto.Authority != null && dto.Resource != null)
+        {
+            var instruction = CreateInternalInstruction(dto, remark.Description);
+            if (instruction != null)
+                list.Add(instruction);
+        }
+    }
+
+    return list;
+}
+
+private static GetInternalInstructions? CreateInternalInstruction(TaxCollectionsDto dto, string remarkDescription)
+{
+    try
+    {
+        return new GetInternalInstructions
+        {
+            Auth = $"{dto.Authority!.Name} {(string.IsNullOrWhiteSpace(dto.Authority.MunicipalityType) ? "" : dto.Authority.MunicipalityType)}",
+            SectionType = "Tax Collection",
+            Resource = dto.Resource!.Name!,
+            Remark = remarkDescription
+        };
+    }
+    catch
+    {
+        // Optionally log the exception
+        return null;
+    }
+}
+
+private static int GetAuthorityTypePriority(string auth)
+{
+    if (auth.Contains("County", StringComparison.OrdinalIgnoreCase)) return 1;
+    if (auth.Contains("Municipality", StringComparison.OrdinalIgnoreCase)) return 2;
+    if (auth.Contains("School_district", StringComparison.OrdinalIgnoreCase)) return 3;
+    return 4; // Unknown or others
+}
