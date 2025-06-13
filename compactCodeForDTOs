@@ -1,0 +1,47 @@
+List<GetInternalInstructions> internalInstructions = new();
+
+foreach (var taxCollectionDto in response.TaxCollections ?? Enumerable.Empty<TaxCollectionsDto>())
+{
+    var remark = taxCollectionDto.Remarks?
+        .FirstOrDefault(x => x?.RemarkType?.Name == "Internal Instructions");
+
+    if (remark != null && taxCollectionDto.Authority != null && taxCollectionDto.Resource != null)
+    {
+        var instruction = CreateInternalInstruction(taxCollectionDto, remark.Description);
+        if (instruction != null)
+            internalInstructions.Add(instruction);
+    }
+}
+
+// Sort by Authority.Type: County → Municipality → School_district
+internalInstructions = internalInstructions
+    .OrderBy(i => GetAuthorityTypePriority(i.Auth))
+    .ToList();
+
+private static GetInternalInstructions? CreateInternalInstruction(TaxCollectionsDto dto, string remarkDescription)
+{
+    try
+    {
+        return new GetInternalInstructions
+        {
+            Auth = $"{dto.Authority!.Name} {(string.IsNullOrWhiteSpace(dto.Authority.MunicipalityType) ? "" : dto.Authority.MunicipalityType)}",
+            SectionType = "Tax Collection",
+            Resource = dto.Resource!.Name!,
+            Remark = remarkDescription
+        };
+    }
+    catch
+    {
+        // Log error if needed
+        return null;
+    }
+}
+
+private static int GetAuthorityTypePriority(string auth)
+{
+    // Adjust logic as needed if Authority.Type is stored separately
+    if (auth.Contains("County", StringComparison.OrdinalIgnoreCase)) return 1;
+    if (auth.Contains("Municipality", StringComparison.OrdinalIgnoreCase)) return 2;
+    if (auth.Contains("School_district", StringComparison.OrdinalIgnoreCase)) return 3;
+    return 4; // Unknown types last
+}
