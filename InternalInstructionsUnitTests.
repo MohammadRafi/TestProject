@@ -1,0 +1,133 @@
+public class GetInternalInstructionsByOrderNumberQueryHandlerTests
+{
+    private readonly Mock<IGraphQLClient> _graphQLClientMock = new();
+    private readonly Mock<IOrderRepository> _orderRepositoryMock = new();
+    private readonly Mock<ILogger<GetInternalInstructionsByOrderNumberQueryHandler>> _loggerMock = new();
+
+    private GetInternalInstructionsByOrderNumberQueryHandler CreateHandler()
+        => new(_graphQLClientMock.Object, _orderRepositoryMock.Object, _loggerMock.Object);
+
+    [Fact]
+    public async Task Handle_InvalidRequest_ReturnsBadFormat()
+    {
+        // Arrange
+        var request = new GetInternalInstructionsByOrderNumberQuery { OrderNumber = null! }; // Invalid
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(request, CancellationToken.None);
+
+        // Assert
+        result.Status.Should().Be(ResponseStatus.BadFormat);
+        result.Success.Should().BeFalse();
+        result.ValidationErrors.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Handle_PropertyNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var request = new GetInternalInstructionsByOrderNumberQuery { OrderNumber = "123" };
+        _orderRepositoryMock.Setup(x => x.GetOrderStatus("123")).Returns(OrderStatus.Active);
+        _orderRepositoryMock.Setup(x => x.GetOrderPropertyDetail("123")).ReturnsAsync((Property)null!);
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(request, CancellationToken.None);
+
+        // Assert
+        result.Status.Should().Be(ResponseStatus.NotFound);
+        result.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_MissingAuthorityCombination_ReturnsBadFormat()
+    {
+        // Arrange
+        var request = new GetInternalInstructionsByOrderNumberQuery { OrderNumber = "123" };
+        _orderRepositoryMock.Setup(x => x.GetOrderStatus("123")).Returns(OrderStatus.Active);
+        _orderRepositoryMock.Setup(x => x.GetOrderPropertyDetail("123")).ReturnsAsync(new Property
+        {
+            CountyId = "", // Invalid
+            CountyName = "",
+            MunicipalityId = "M1",
+            MunicipalityName = "City",
+            MunicipalityType = "Type",
+            SchoolDistrictId = "S1",
+            SchoolDistrictName = "School"
+        });
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(request, CancellationToken.None);
+
+        // Assert
+        result.Status.Should().Be(ResponseStatus.BadFormat);
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Missing Authority Details");
+    }
+
+    [Fact]
+    public async Task Handle_GraphQLResponseInvalid_ReturnsBadFormat()
+    {
+        // Arrange
+        var request = new GetInternalInstructionsByOrderNumberQuery { OrderNumber = "123" };
+        var property = new Property
+        {
+            CountyId = "C1",
+            CountyName = "County",
+            MunicipalityId = "M1",
+            MunicipalityName = "City",
+            MunicipalityType = "Urban",
+            SchoolDistrictId = "S1",
+            SchoolDistrictName = "District"
+        };
+
+        _orderRepositoryMock.Setup(x => x.GetOrderStatus("123")).Returns(OrderStatus.Active);
+        _orderRepositoryMock.Setup(x => x.GetOrderPropertyDetail("123")).ReturnsAsync(property);
+        _graphQLClientMock.Setup(x => x.SendQueryAsync<OrderEnrichmentDataDto, AuthorityDto>(
+            It.IsAny<string>(), It.IsAny<AuthorityDto>())).ReturnsAsync(new OrderEnrichmentDataDto()); // invalid by validator
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(request, CancellationToken.None);
+
+        // Assert
+        result.Status.Should().Be(ResponseStatus.BadFormat);
+        result.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_ValidRequest_ReturnsSuccessWithData()
+    {
+        // Arrange
+        var request = new GetInternalInstructionsByOrderNumberQuery { OrderNumber = "123" };
+        var property = new Property
+        {
+            CountyId = "C1",
+            CountyName = "County",
+            MunicipalityId = "M1",
+            MunicipalityName = "City",
+            MunicipalityType = "Urban",
+            SchoolDistrictId = "S1",
+            SchoolDistrictName = "District"
+        };
+
+        _orderRepositoryMock.Setup(x => x.GetOrderStatus("123")).Returns(OrderStatus.Active);
+        _orderRepositoryMock.Setup(x => x.GetOrderPropertyDetail("123")).ReturnsAsync(property);
+        _graphQLClientMock.Setup(x => x.SendQueryAsync<OrderEnrichmentDataDto, AuthorityDto>(
+            It.IsAny<string>(), It.IsAny<AuthorityDto>())).ReturnsAsync(new OrderEnrichmentDataDto());
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(request, CancellationToken.None);
+
+        // Assert
+        result.Status.Should().Be(ResponseStatus.Success);
+        result.Success.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+    }
+}
