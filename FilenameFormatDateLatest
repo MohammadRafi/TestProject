@@ -1,0 +1,41 @@
+using System;
+using System.IO;
+using System.Text.RegularExpressions;
+using System.Globalization;
+
+public static string CleanAndAppendDate(string fileName)
+{
+    if (string.IsNullOrWhiteSpace(fileName))
+        return string.Empty;
+
+    var ext = Path.GetExtension(fileName);
+    var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+
+    // Find timestamp pattern
+    var match = Regex.Match(nameWithoutExt, @"\d{8}T\d{6}");
+    if (match.Success)
+    {
+        var timestamp = match.Value;
+
+        // Extract date part yyyyMMdd
+        var datePart = timestamp.Substring(0, 8);
+
+        // Convert to MMddyyyy
+        if (DateTime.TryParseExact(datePart, "yyyyMMdd",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out DateTime parsedDate))
+        {
+            var formattedDate = parsedDate.ToString("MMddyyyy");
+
+            // Remove timestamp from name
+            nameWithoutExt = nameWithoutExt.Replace(timestamp, "").TrimEnd('_', '-', '.');
+
+            // Append formatted date
+            nameWithoutExt = $"{nameWithoutExt}_{formattedDate}";
+        }
+    }
+
+    // Recombine
+    return $"{nameWithoutExt}{ext}";
+}
