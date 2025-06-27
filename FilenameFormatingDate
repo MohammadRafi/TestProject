@@ -1,0 +1,27 @@
+using System;
+using System.IO;
+using System.Text.RegularExpressions;
+
+public static string ExtractDateFormatted(string fileName)
+{
+    if (string.IsNullOrWhiteSpace(fileName))
+        return string.Empty;
+
+    // Find match for pattern like 20240625T153045
+    var match = Regex.Match(fileName, @"\d{8}T\d{6}");
+    if (!match.Success)
+        return string.Empty;
+
+    var timestamp = match.Value;
+
+    // Get yyyyMMdd
+    var datePart = timestamp.Substring(0, 8);
+
+    if (DateTime.TryParseExact(datePart, "yyyyMMdd", null,
+        System.Globalization.DateTimeStyles.None, out DateTime parsedDate))
+    {
+        return parsedDate.ToString("MMddyyyy");
+    }
+
+    return string.Empty;
+}
