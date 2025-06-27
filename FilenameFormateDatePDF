@@ -1,0 +1,39 @@
+using System;
+using System.IO;
+using System.Text.RegularExpressions;
+using System.Globalization;
+
+public static string CleanAndAppendDateIso(string fileName)
+{
+    if (string.IsNullOrWhiteSpace(fileName))
+        return string.Empty;
+
+    var ext = Path.GetExtension(fileName);
+    var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+
+    // Match pattern like 2024-11-26T12:19:14.8835901Z
+    var match = Regex.Match(nameWithoutExt, @"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z");
+
+    if (match.Success)
+    {
+        var isoTimestamp = match.Value;
+
+        // Parse ISO 8601 timestamp
+        if (DateTime.TryParseExact(isoTimestamp,
+            new[] { "yyyy-MM-ddTHH:mm:ssZ", "yyyy-MM-ddTHH:mm:ss.fffffffZ" },
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out DateTime parsedDate))
+        {
+            var formattedDate = parsedDate.ToString("MMddyyyy");
+
+            // Remove the timestamp from name
+            nameWithoutExt = nameWithoutExt.Replace(isoTimestamp, "").TrimEnd('_', '-', '.');
+
+            // Append formatted date
+            nameWithoutExt = $"{nameWithoutExt}_{formattedDate}";
+        }
+    }
+
+    return $"{nameWithoutExt}{ext}";
+}
