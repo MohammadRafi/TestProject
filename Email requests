@@ -1,0 +1,51 @@
+public enum MyType
+{
+    One,   // Select ListA
+    Two,   // Select ListB
+    Three, // Select ListC
+    Four   // Select ListD
+}
+
+public class MyModel
+{
+    public MyType Type { get; set; }
+    public List<Item> ListA { get; set; }
+    public List<Item> ListB { get; set; }
+    public List<Item> ListC { get; set; }
+    public List<Item> ListD { get; set; }
+}
+
+public class Item
+{
+    public string Name { get; set; }
+}
+
+public class MyService
+{
+    private Dictionary<string, MyType> BuildDictionary(MyModel model)
+    {
+        if (model == null)
+            throw new ArgumentNullException(nameof(model));
+
+        // Select list based on enum type
+        List<Item> selectedList = model.Type switch
+        {
+            MyType.One   => model.ListA,
+            MyType.Two   => model.ListB,
+            MyType.Three => model.ListC,
+            MyType.Four  => model.ListD,
+            _ => new List<Item>()
+        };
+
+        if (selectedList == null)
+            return new Dictionary<string, MyType>();
+
+        // Build dictionary: Key = Item.Name, Value = model.Type
+        var dictionary = selectedList
+            .Where(x => !string.IsNullOrWhiteSpace(x.Name))
+            .GroupBy(x => x.Name) // ensure no duplicates
+            .ToDictionary(g => g.Key, g => model.Type);
+
+        return dictionary;
+    }
+}
